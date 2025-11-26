@@ -42,13 +42,24 @@ export default function Home() {
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              华东导游词
-            </h1>
-            <p className="text-gray-600">
-              探索华东地区的历史文化与自然风光
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="flex-1 text-center">
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                华东导游词
+              </h1>
+              <p className="text-gray-600">
+                探索华东地区的历史文化与自然风光
+              </p>
+            </div>
+            <a
+              href="/resources"
+              className="absolute right-4 sm:right-6 lg:right-8 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              参考资料
+            </a>
           </div>
         </div>
       </header>

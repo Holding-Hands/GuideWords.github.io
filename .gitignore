@@ -3,9 +3,10 @@ node_modules/
 /.pnp
 .pnp.js
 
-# Large files
+# Large files (keep in .gitignore, too large for GitHub)
 资料/
 *.pdf
+public/resources/*.pdf
 
 # Testing
 /coverage
