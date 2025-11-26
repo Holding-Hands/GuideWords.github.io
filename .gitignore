@@ -3,6 +3,10 @@ node_modules/
 /.pnp
 .pnp.js
 
+# Large files
+资料/
+*.pdf
+
 # Testing
 /coverage
 
