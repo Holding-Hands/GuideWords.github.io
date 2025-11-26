@@ -20,10 +20,18 @@ const resources: Resource[] = [
     title: '胡雪岩故居修复研究',
     description: '高念华著 - 北京文物出版社。详细介绍了胡雪岩故居的修复过程和历史研究。',
     fileSize: '163 MB',
-    pdfUrl: '/资料/胡雪岩故居修复研究 -- 高念华著 --北京_文物出版社 .pdf',
-    // 如果文件太大，可以使用外部链接
-    // externalUrl: 'https://your-cloud-storage.com/file.pdf'
+    pdfUrl: '/resources/huxueyan.pdf',
+    // 由于文件过大，建议使用云存储外部链接
+    // externalUrl: 'https://your-cloud-storage.com/huxueyan.pdf'
   },
+  // 示例：添加更多资料
+  // {
+  //   id: 'example',
+  //   title: '示例资料',
+  //   description: '这是一个示例',
+  //   fileSize: '10 MB',
+  //   pdfUrl: '/resources/example.pdf',
+  // },
 ]
 
 export default function ResourcesPage() {
