@@ -22,6 +22,16 @@ function HomePage() {
     return Array.from(cats)
   }, [])
 
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      '全部': guideData.length
+    }
+    guideData.forEach(guide => {
+      counts[guide.category] = (counts[guide.category] || 0) + 1
+    })
+    return counts
+  }, [])
+
   const filteredGuides = useMemo(() => {
     let guides = guideData
     
@@ -144,6 +154,7 @@ function HomePage() {
           categories={categories}
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
+          categoryCounts={categoryCounts}
         />
 
         {/* Guide Cards Grid */}
