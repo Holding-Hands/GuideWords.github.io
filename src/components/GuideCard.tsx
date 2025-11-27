@@ -9,7 +9,7 @@ export default function GuideCard({ guide, onClick }: GuideCardProps) {
   return (
     <div
       onClick={onClick}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-900/50 hover:shadow-2xl dark:hover:shadow-gray-900/80 transition-all duration-300 cursor-pointer overflow-hidden group relative transform hover:-translate-y-2 hover:scale-[1.01] border-2 border-transparent hover:border-blue-400 dark:hover:border-blue-500"
+      className="bg-white dark:bg-gray-800 rounded-xl shadow-lg dark:shadow-gray-900/50 hover:shadow-2xl dark:hover:shadow-gray-900/80 transition-all duration-300 cursor-pointer overflow-hidden group relative transform hover:-translate-y-3 hover:scale-[1.02] border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500"
     >
       {/* Gradient overlay on hover */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-cyan-50/0 dark:from-blue-900/0 dark:to-cyan-900/0 group-hover:from-blue-50/30 group-hover:to-cyan-50/30 dark:group-hover:from-blue-900/20 dark:group-hover:to-cyan-900/20 transition-all duration-300 pointer-events-none" />

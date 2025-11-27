@@ -10,8 +10,8 @@ export default function CategoryNav({
   onSelectCategory,
 }: CategoryNavProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 transition-colors">
-      <div className="flex flex-wrap gap-2">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md dark:shadow-gray-900/50 p-5 transition-colors border border-gray-200 dark:border-gray-700">
+      <div className="flex flex-wrap gap-3">
         {categories.map(category => (
           <button
             key={category}

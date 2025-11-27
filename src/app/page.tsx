@@ -59,14 +59,14 @@ function HomePage() {
       <Watermark text="谁人不识张公子" fontSize={18} opacity={theme === 'dark' ? 0.02 : 0.04} rotate={-25} gap={250} />
       
       {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-sm dark:shadow-gray-900/50 sticky top-0 z-10 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <header className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md shadow-sm dark:shadow-gray-900/50 sticky top-0 z-10 transition-colors duration-300 border-b border-gray-200/50 dark:border-gray-700/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-between">
             <div className="flex-1 text-center">
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 transition-colors">
+              <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent mb-3 transition-all">
                 华东导游词
               </h1>
-              <p className="text-gray-600 dark:text-gray-300 transition-colors">
+              <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base transition-colors">
                 探索华东地区的历史文化与自然风光
               </p>
             </div>
@@ -111,16 +111,16 @@ function HomePage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
         {/* Search Bar */}
-        <div className="mb-6">
+        <div className="mb-8">
           <div className="relative max-w-2xl mx-auto">
             <input
               type="text"
               placeholder="搜索景点名称、描述或位置..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 pl-12 pr-10 text-gray-900 dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              className="w-full px-4 py-4 pl-12 pr-10 text-gray-900 dark:text-white bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all placeholder:text-gray-400 dark:placeholder:text-gray-500 hover:border-gray-300 dark:hover:border-gray-600"
             />
             <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -146,17 +146,24 @@ function HomePage() {
         />
 
         {/* Guide Cards Grid */}
-        <div className="mt-8">
-          <div className="mb-4">
-            <h2 className="text-2xl font-semibold text-gray-800">
-              {selectedCategory === '全部' ? '所有导游词' : selectedCategory}
-              <span className="ml-2 text-sm text-gray-500">
-                ({filteredGuides.length} 篇)
+        <div className="mt-10">
+          <div className="mb-6 flex items-baseline justify-between">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                {selectedCategory === '全部' ? '所有导游词' : selectedCategory}
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                共 {filteredGuides.length} 篇精彩内容
+              </p>
+            </div>
+            {searchQuery && (
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                搜索结果
               </span>
-            </h2>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
             {filteredGuides.map(guide => (
               <GuideCard
                 key={guide.id}
@@ -167,8 +174,18 @@ function HomePage() {
           </div>
 
           {filteredGuides.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">暂无导游词</p>
+            <div className="col-span-full">
+              <div className="text-center py-20">
+                <svg className="w-20 h-20 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  {searchQuery ? '未找到相关内容' : '暂无导游词'}
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  {searchQuery ? '试试其他关键词或选择不同的分类' : '敬请期待更多精彩内容'}
+                </p>
+              </div>
             </div>
           )}
         </div>
