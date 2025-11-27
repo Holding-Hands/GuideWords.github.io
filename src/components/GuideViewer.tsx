@@ -32,14 +32,16 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
   const [isPaused, setIsPaused] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [ttsMode, setTtsMode] = useState<'native' | 'voicerss' | null>(null)
+  const [progress, setProgress] = useState({ current: 0, total: 0 }) // 播放进度
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   
   // 分段播放相关 refs
   const chunksRef = useRef<string[]>([])
   const currentChunkRef = useRef<number>(0)
-  const preloadedAudioRef = useRef<HTMLAudioElement | null>(null)
+  const preloadedAudiosRef = useRef<Map<number, HTMLAudioElement>>(new Map()) // 预加载队列
   const isStoppedRef = useRef<boolean>(false)
+  const loadingPromisesRef = useRef<Map<number, Promise<HTMLAudioElement | null>>>(new Map())
 
   // 初始化时检测 TTS 模式
   useEffect(() => {
@@ -70,14 +72,17 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
       audioRef.current.currentTime = 0
       audioRef.current = null
     }
-    // 清理预加载
-    if (preloadedAudioRef.current) {
-      URL.revokeObjectURL(preloadedAudioRef.current.src)
-      preloadedAudioRef.current = null
-    }
+    // 清理所有预加载
+    preloadedAudiosRef.current.forEach(audio => {
+      URL.revokeObjectURL(audio.src)
+    })
+    preloadedAudiosRef.current.clear()
+    loadingPromisesRef.current.clear()
+    
     // 重置分段状态
     chunksRef.current = []
     currentChunkRef.current = 0
+    setProgress({ current: 0, total: 0 })
     
     setIsPlaying(false)
     setIsPaused(false)
@@ -175,6 +180,22 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
     }
   }
 
+  // 预加载指定索引的音频
+  const preloadChunk = (index: number) => {
+    const chunks = chunksRef.current
+    if (index >= chunks.length || isStoppedRef.current) return
+    if (preloadedAudiosRef.current.has(index) || loadingPromisesRef.current.has(index)) return
+
+    const promise = loadChunk(chunks[index]).then(audio => {
+      if (audio && !isStoppedRef.current) {
+        preloadedAudiosRef.current.set(index, audio)
+      }
+      loadingPromisesRef.current.delete(index)
+      return audio
+    })
+    loadingPromisesRef.current.set(index, promise)
+  }
+
   // 播放下一段
   const playNextChunk = async () => {
     if (isStoppedRef.current) return
@@ -186,17 +207,32 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
       // 全部播放完毕
       setIsPlaying(false)
       setIsPaused(false)
+      setProgress({ current: 0, total: 0 })
       return
     }
 
-    // 使用预加载的音频或者加载新的
-    let audio = preloadedAudioRef.current
+    // 更新进度
+    setProgress({ current: currentIndex + 1, total: chunks.length })
+
+    // 获取音频（优先用预加载的）
+    let audio: HTMLAudioElement | null | undefined = preloadedAudiosRef.current.get(currentIndex)
+    
     if (!audio) {
-      setIsLoading(true)
-      audio = await loadChunk(chunks[currentIndex])
-      setIsLoading(false)
+      // 等待正在加载的
+      const loadingPromise = loadingPromisesRef.current.get(currentIndex)
+      if (loadingPromise) {
+        setIsLoading(true)
+        audio = await loadingPromise
+        setIsLoading(false)
+      } else {
+        // 没有预加载，立即加载
+        setIsLoading(true)
+        audio = await loadChunk(chunks[currentIndex])
+        setIsLoading(false)
+      }
     }
-    preloadedAudioRef.current = null
+    
+    preloadedAudiosRef.current.delete(currentIndex)
 
     if (!audio || isStoppedRef.current) {
       setIsPlaying(false)
@@ -209,6 +245,10 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
       setIsPlaying(true)
       setIsPaused(false)
       setIsLoading(false)
+      
+      // 开始播放后立即预加载后面 2 段
+      preloadChunk(currentIndex + 1)
+      preloadChunk(currentIndex + 2)
     }
 
     audio.onended = () => {
@@ -218,18 +258,8 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
     }
 
     audio.onerror = () => {
-      setIsPlaying(false)
-      setIsLoading(false)
-    }
-
-    // 预加载下一段
-    const nextIndex = currentIndex + 1
-    if (nextIndex < chunks.length) {
-      loadChunk(chunks[nextIndex]).then(nextAudio => {
-        if (!isStoppedRef.current) {
-          preloadedAudioRef.current = nextAudio
-        }
-      })
+      currentChunkRef.current++
+      playNextChunk() // 跳过错误段继续
     }
 
     console.log(`Playing chunk ${currentIndex + 1}/${chunks.length}`)
@@ -239,12 +269,19 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
   // 使用 VoiceRSS API（分段预加载，快速响应）
   const speakWithVoiceRSS = async (text: string) => {
     isStoppedRef.current = false
+    preloadedAudiosRef.current.clear()
+    loadingPromisesRef.current.clear()
     
-    // 分段
-    const chunks = splitTextToChunks(text, 300)
+    // 分段（更小的段落更快响应）
+    const chunks = splitTextToChunks(text, 200)
     chunksRef.current = chunks
     currentChunkRef.current = 0
+    setProgress({ current: 0, total: chunks.length })
     console.log(`Split into ${chunks.length} chunks`)
+
+    // 同时开始加载前 2 段
+    preloadChunk(0)
+    preloadChunk(1)
 
     // 开始播放第一段
     await playNextChunk()
@@ -373,8 +410,25 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
                   </svg>
                 </button>
               )}
+              
+              {/* 进度显示 */}
+              {progress.total > 0 && (
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
+                  {progress.current}/{progress.total}
+                </span>
+              )}
             </div>
           </div>
+          
+          {/* 进度条 */}
+          {progress.total > 0 && (
+            <div className="mt-2 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-blue-500 transition-all duration-300 ease-out"
+                style={{ width: `${(progress.current / progress.total) * 100}%` }}
+              />
+            </div>
+          )}
         </div>
       </header>
 
