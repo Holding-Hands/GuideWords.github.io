@@ -4,6 +4,12 @@ import { useEffect } from 'react'
 
 export default function CopyProtection() {
   useEffect(() => {
+    // 禁用右键菜单
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault()
+      return false
+    }
+
     // 禁用复制
     const handleCopy = (e: ClipboardEvent) => {
       e.preventDefault()
@@ -51,6 +57,7 @@ export default function CopyProtection() {
       }
     }
 
+    document.addEventListener('contextmenu', handleContextMenu)
     document.addEventListener('copy', handleCopy)
     document.addEventListener('cut', handleCut)
     document.addEventListener('selectstart', handleSelectStart)
@@ -58,6 +65,7 @@ export default function CopyProtection() {
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
+      document.removeEventListener('contextmenu', handleContextMenu)
       document.removeEventListener('copy', handleCopy)
       document.removeEventListener('cut', handleCut)
       document.removeEventListener('selectstart', handleSelectStart)

@@ -14,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
-      <body className="antialiased select-none" onContextMenu={(e) => e.preventDefault()}>
+      <body className="antialiased select-none">
         <CopyProtection />
         {children}
       </body>
