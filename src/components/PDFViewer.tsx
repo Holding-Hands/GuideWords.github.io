@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext'
 
 interface PDFViewerProps {
   pdfUrl: string
@@ -8,7 +9,8 @@ interface PDFViewerProps {
   onBack: () => void
 }
 
-export default function PDFViewer({ pdfUrl, title, onBack }: PDFViewerProps) {
+function PDFViewerContent({ pdfUrl, title, onBack }: PDFViewerProps) {
+  const { theme } = useTheme()
   const [isMobile, setIsMobile] = useState(false)
   const [pdfError, setPdfError] = useState(false)
 
@@ -153,5 +155,13 @@ export default function PDFViewer({ pdfUrl, title, onBack }: PDFViewerProps) {
         )}
       </main>
     </div>
+  )
+}
+
+export default function PDFViewer(props: PDFViewerProps) {
+  return (
+    <ThemeProvider>
+      <PDFViewerContent {...props} />
+    </ThemeProvider>
   )
 }
