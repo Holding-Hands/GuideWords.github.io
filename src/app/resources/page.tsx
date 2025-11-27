@@ -5,6 +5,7 @@ import Link from 'next/link'
 import PDFViewer from '@/components/PDFViewer'
 import Watermark from '@/components/Watermark'
 import { withBasePath } from '@/config/site'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 
 interface Resource {
   id: string
@@ -45,7 +46,7 @@ const resources: Resource[] = [
   // },
 ]
 
-export default function ResourcesPage() {
+function ResourcesPageContent() {
   const [selectedPdf, setSelectedPdf] = useState<Resource | null>(null)
 
   if (selectedPdf) {
@@ -169,5 +170,13 @@ export default function ResourcesPage() {
         </div>
       </footer>
     </div>
+  )
+}
+
+export default function ResourcesPage() {
+  return (
+    <ThemeProvider>
+      <ResourcesPageContent />
+    </ThemeProvider>
   )
 }
