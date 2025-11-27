@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import CopyProtection from '@/components/CopyProtection'
-import Script from 'next/script'
+import VConsoleInit from '@/components/VConsole'
 
 export const metadata: Metadata = {
   title: '华东导游词 - 在线浏览平台',
@@ -19,14 +19,7 @@ export default function RootLayout({
         <CopyProtection />
         {children}
         {/* vConsole 移动端调试工具 */}
-        <Script 
-          src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js" 
-          strategy="lazyOnload"
-          onLoad={() => {
-            // @ts-ignore
-            new window.VConsole()
-          }}
-        />
+        <VConsoleInit />
       </body>
     </html>
   )
