@@ -5,8 +5,21 @@ import { Guide } from '@/types/guide'
 import Watermark from './Watermark'
 import { useTheme } from '@/contexts/ThemeContext'
 
-// VoiceRSS API Key
+// VoiceRSS API Key（备用方案）
 const VOICERSS_API_KEY = '28fef066a3164873802fae9fe37e351c'
+
+// 检测是否为微信浏览器
+const isWeChat = () => {
+  if (typeof window === 'undefined') return false
+  const ua = navigator.userAgent.toLowerCase()
+  return ua.includes('micromessenger')
+}
+
+// 检测是否支持 Web Speech API
+const supportsSpeechSynthesis = () => {
+  if (typeof window === 'undefined') return false
+  return 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window
+}
 
 interface GuideViewerProps {
   guide: Guide
@@ -18,10 +31,31 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [ttsMode, setTtsMode] = useState<'native' | 'voicerss' | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+
+  // 初始化时检测 TTS 模式
+  useEffect(() => {
+    if (isWeChat()) {
+      setTtsMode('voicerss')
+      console.log('TTS mode: VoiceRSS (WeChat detected)')
+    } else if (supportsSpeechSynthesis()) {
+      setTtsMode('native')
+      console.log('TTS mode: Native Web Speech API')
+    } else {
+      setTtsMode('voicerss')
+      console.log('TTS mode: VoiceRSS (fallback)')
+    }
+  }, [])
 
   // 停止朗读
   const stopSpeaking = () => {
+    // 停止原生 API
+    if (ttsMode === 'native' && window.speechSynthesis) {
+      window.speechSynthesis.cancel()
+    }
+    // 停止 Audio
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current.currentTime = 0
@@ -32,67 +66,66 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
     setIsLoading(false)
   }
 
-  // 开始/暂停朗读
-  const toggleSpeaking = async () => {
-    if (isLoading) return // 防止重复点击
+  // 使用原生 Web Speech API（快速，PC 端）
+  const speakWithNative = (text: string) => {
+    window.speechSynthesis.cancel() // 先停止之前的
 
-    if (isPlaying) {
-      if (isPaused) {
-        // 继续播放
-        audioRef.current?.play()
-        setIsPaused(false)
-      } else {
-        // 暂停
-        audioRef.current?.pause()
-        setIsPaused(true)
-      }
-      return
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'zh-CN'
+    utterance.rate = 1.0
+
+    // 尝试找中文语音
+    const voices = window.speechSynthesis.getVoices()
+    const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN'))
+    if (zhVoice) utterance.voice = zhVoice
+
+    utterance.onstart = () => {
+      setIsPlaying(true)
+      setIsPaused(false)
+      setIsLoading(false)
     }
 
-    // 提取纯文本
-    const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = guide.content
-    let text = tempDiv.innerText || tempDiv.textContent || ''
-    
-    if (!text.trim()) return
+    utterance.onend = () => {
+      setIsPlaying(false)
+      setIsPaused(false)
+    }
 
-    // 限制文本长度（减少以加快响应速度）
+    utterance.onerror = (e) => {
+      console.error('Native TTS error:', e)
+      setIsPlaying(false)
+      setIsPaused(false)
+      setIsLoading(false)
+    }
+
+    utteranceRef.current = utterance
+    window.speechSynthesis.speak(utterance)
+  }
+
+  // 使用 VoiceRSS API（慢，但兼容微信）
+  const speakWithVoiceRSS = async (text: string) => {
+    // 限制文本长度
     if (text.length > 1000) {
       text = text.substring(0, 1000) + '...'
     }
 
-    setIsLoading(true)
-    console.log('TTS text length:', text.length)
-
     try {
-      // 使用 POST 请求获取音频
       const response = await fetch('https://api.voicerss.org/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           key: VOICERSS_API_KEY,
           hl: 'zh-cn',
           src: text,
           c: 'MP3',
-          f: '8khz_8bit_mono', // 使用更低质量以加快速度
+          f: '8khz_8bit_mono',
         }),
       })
 
-      if (!response.ok) {
-        throw new Error('API request failed')
-      }
+      if (!response.ok) throw new Error('API request failed')
 
-      // 将响应转为 Blob
       const blob = await response.blob()
-      
-      console.log('VoiceRSS response:', {
-        type: blob.type,
-        size: blob.size,
-      })
-      
-      // 检查是否是错误响应（VoiceRSS 错误时返回文本，体积很小）
+      console.log('VoiceRSS response:', { type: blob.type, size: blob.size })
+
       if (blob.size < 1000 || blob.type.includes('text')) {
         const errorText = await blob.text()
         console.error('VoiceRSS error:', errorText)
@@ -101,10 +134,7 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
         return
       }
 
-      // 创建 Blob URL
       const audioUrl = URL.createObjectURL(blob)
-
-      // 创建 Audio 元素
       const audio = new Audio(audioUrl)
       audioRef.current = audio
 
@@ -117,33 +147,70 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
       audio.onended = () => {
         setIsPlaying(false)
         setIsPaused(false)
-        URL.revokeObjectURL(audioUrl) // 释放内存
+        URL.revokeObjectURL(audioUrl)
         audioRef.current = null
       }
 
-      audio.onerror = (e) => {
-        console.error('Audio playback error:', e)
+      audio.onerror = () => {
         setIsPlaying(false)
-        setIsPaused(false)
         setIsLoading(false)
         URL.revokeObjectURL(audioUrl)
         audioRef.current = null
       }
 
-      // 开始播放
       await audio.play()
-      setIsPlaying(true)
-      setIsLoading(false)
-
     } catch (err) {
-      console.error('TTS error:', err)
+      console.error('VoiceRSS error:', err)
       setIsLoading(false)
+    }
+  }
+
+  // 开始/暂停朗读
+  const toggleSpeaking = async () => {
+    if (isLoading) return
+
+    // 处理暂停/继续
+    if (isPlaying) {
+      if (ttsMode === 'native') {
+        if (isPaused) {
+          window.speechSynthesis.resume()
+          setIsPaused(false)
+        } else {
+          window.speechSynthesis.pause()
+          setIsPaused(true)
+        }
+      } else {
+        if (isPaused) {
+          audioRef.current?.play()
+          setIsPaused(false)
+        } else {
+          audioRef.current?.pause()
+          setIsPaused(true)
+        }
+      }
+      return
+    }
+
+    // 提取纯文本
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = guide.content
+    const text = tempDiv.innerText || tempDiv.textContent || ''
+    if (!text.trim()) return
+
+    setIsLoading(true)
+    console.log('TTS mode:', ttsMode, 'text length:', text.length)
+
+    if (ttsMode === 'native') {
+      speakWithNative(text)
+    } else {
+      await speakWithVoiceRSS(text)
     }
   }
 
   // 组件卸载时停止播放
   useEffect(() => {
     return () => {
+      if (window.speechSynthesis) window.speechSynthesis.cancel()
       if (audioRef.current) {
         audioRef.current.pause()
         audioRef.current = null
