@@ -59,24 +59,24 @@ export default function ResourcesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col transition-colors duration-300">
       <Watermark text="谁人不识张公子" fontSize={18} opacity={0.04} rotate={-25} gap={250} />
       
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm shadow-sm">
+      <header className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md shadow-sm dark:shadow-gray-900/50 transition-colors duration-300 border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                 参考资料
               </h1>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 相关历史文献和研究资料
               </p>
             </div>
             <Link
               href="/"
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+              className="flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -93,43 +93,43 @@ export default function ResourcesPage() {
           {resources.map(resource => (
             <div
               key={resource.id}
-              className="bg-white rounded-lg shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden group relative transform hover:-translate-y-2 hover:scale-[1.01] border-2 border-transparent hover:border-blue-400"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg dark:shadow-gray-900/50 hover:shadow-2xl dark:hover:shadow-gray-900/80 transition-all duration-300 overflow-hidden group relative transform hover:-translate-y-3 hover:scale-[1.02] border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500"
             >
               {/* Gradient overlay on hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-cyan-50/0 group-hover:from-blue-50/30 group-hover:to-cyan-50/30 transition-all duration-300 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/0 to-cyan-50/0 dark:from-blue-900/0 dark:to-cyan-900/0 group-hover:from-blue-50/30 group-hover:to-cyan-50/30 dark:group-hover:from-blue-900/20 dark:group-hover:to-cyan-900/20 transition-all duration-300 pointer-events-none" />
               
               <div className="p-6 relative z-10">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-8 h-8 text-red-500 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-xs text-gray-500 font-medium">{resource.fileSize}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{resource.fileSize}</span>
                   </div>
-                  <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full whitespace-nowrap">
+                  <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 text-xs font-medium rounded-full whitespace-nowrap">
                     {resource.category}
                   </span>
                 </div>
                 
-                <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors mb-2">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mb-2">
                   {resource.title}
                 </h3>
                 
-                <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                <p className="text-gray-600 dark:text-gray-300 text-sm mb-4 line-clamp-3">
                   {resource.description}
                 </p>
                 
                 <div className="flex gap-2">
                   <button
                     onClick={() => setSelectedPdf(resource)}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all hover:scale-105 hover:shadow-lg"
+                    className="flex-1 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-all hover:scale-105 hover:shadow-lg"
                   >
                     在线阅读
                   </button>
                   <a
                     href={resource.externalUrl || withBasePath(resource.pdfUrl)}
                     download={resource.title + '.pdf'}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all hover:scale-105 hover:border-blue-400"
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all hover:scale-105 hover:border-blue-400 dark:hover:border-blue-500"
                     title="下载"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
