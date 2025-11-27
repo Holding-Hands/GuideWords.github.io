@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import PDFViewer from '@/components/PDFViewer'
 import Watermark from '@/components/Watermark'
+import { withBasePath } from '@/config/site'
 
 interface Resource {
   id: string
@@ -51,7 +52,7 @@ export default function ResourcesPage() {
   if (selectedPdf) {
     return (
       <PDFViewer
-        pdfUrl={selectedPdf.pdfUrl}
+        pdfUrl={withBasePath(selectedPdf.pdfUrl)}
         title={selectedPdf.title}
         onBack={() => setSelectedPdf(null)}
       />
@@ -138,7 +139,7 @@ export default function ResourcesPage() {
                     </button>
                   )}
                   <a
-                    href={resource.pdfUrl}
+                    href={withBasePath(resource.pdfUrl)}
                     download
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all hover:scale-105 hover:border-blue-400"
                   >
