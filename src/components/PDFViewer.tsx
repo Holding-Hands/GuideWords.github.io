@@ -24,11 +24,20 @@ export default function PDFViewer({ pdfUrl, title, onBack }: PDFViewerProps) {
 
   // 构建完整的 PDF URL（使用 Google Docs Viewer 作为备选）
   const getViewerUrl = () => {
+    // 判断是否为外部链接（GitHub Releases 等）
+    const isExternalUrl = pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')
+    
+    if (isExternalUrl) {
+      // 外部链接使用 Google Docs Viewer 在线预览
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`
+    }
+    
     if (pdfError || isMobile) {
       // 移动端或出错时使用 Google Docs Viewer
       return `https://docs.google.com/viewer?url=${encodeURIComponent(window.location.origin + pdfUrl)}&embedded=true`
     }
-    // PC 端使用浏览器内置查看器
+    
+    // PC 端本地文件使用浏览器内置查看器
     return pdfUrl
   }
 
