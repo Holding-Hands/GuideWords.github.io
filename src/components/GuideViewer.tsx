@@ -17,6 +17,7 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
   const { theme } = useTheme()
   const [isPlaying, setIsPlaying] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // 停止朗读
@@ -28,10 +29,13 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
     }
     setIsPlaying(false)
     setIsPaused(false)
+    setIsLoading(false)
   }
 
   // 开始/暂停朗读
-  const toggleSpeaking = () => {
+  const toggleSpeaking = async () => {
+    if (isLoading) return // 防止重复点击
+
     if (isPlaying) {
       if (isPaused) {
         // 继续播放
@@ -42,23 +46,56 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
         audioRef.current?.pause()
         setIsPaused(true)
       }
-    } else {
-      // 提取纯文本
-      const tempDiv = document.createElement('div')
-      tempDiv.innerHTML = guide.content
-      let text = tempDiv.innerText || tempDiv.textContent || ''
-      
-      if (!text.trim()) return
+      return
+    }
 
-      // VoiceRSS 有字符限制（免费版约 100KB），如果文本太长需要截断
-      // 为了安全起见，限制在 5000 字符
-      if (text.length > 5000) {
-        text = text.substring(0, 5000) + '...'
+    // 提取纯文本
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = guide.content
+    let text = tempDiv.innerText || tempDiv.textContent || ''
+    
+    if (!text.trim()) return
+
+    // 限制文本长度（VoiceRSS 免费版有限制）
+    if (text.length > 3000) {
+      text = text.substring(0, 3000) + '...'
+    }
+
+    setIsLoading(true)
+
+    try {
+      // 使用 POST 请求获取音频（避免 URL 长度限制）
+      const response = await fetch('https://api.voicerss.org/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          key: VOICERSS_API_KEY,
+          hl: 'zh-cn',
+          src: text,
+          c: 'MP3',
+          f: '16khz_16bit_mono',
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('API request failed')
       }
 
-      // 构建 VoiceRSS API URL
-      const encodedText = encodeURIComponent(text)
-      const audioUrl = `https://api.voicerss.org/?key=${VOICERSS_API_KEY}&hl=zh-cn&src=${encodedText}&c=MP3`
+      // 将响应转为 Blob
+      const blob = await response.blob()
+      
+      // 检查是否是错误响应（VoiceRSS 错误时返回文本）
+      if (blob.type.includes('text')) {
+        const errorText = await blob.text()
+        console.error('VoiceRSS error:', errorText)
+        setIsLoading(false)
+        return
+      }
+
+      // 创建 Blob URL
+      const audioUrl = URL.createObjectURL(blob)
 
       // 创建 Audio 元素
       const audio = new Audio(audioUrl)
@@ -67,28 +104,33 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
       audio.onplay = () => {
         setIsPlaying(true)
         setIsPaused(false)
+        setIsLoading(false)
       }
 
       audio.onended = () => {
         setIsPlaying(false)
         setIsPaused(false)
+        URL.revokeObjectURL(audioUrl) // 释放内存
         audioRef.current = null
       }
 
       audio.onerror = (e) => {
-        console.error('Audio error:', e)
+        console.error('Audio playback error:', e)
         setIsPlaying(false)
         setIsPaused(false)
+        setIsLoading(false)
+        URL.revokeObjectURL(audioUrl)
         audioRef.current = null
       }
 
       // 开始播放
-      audio.play().catch(err => {
-        console.error('Play failed:', err)
-        setIsPlaying(false)
-      })
-
+      await audio.play()
       setIsPlaying(true)
+      setIsLoading(false)
+
+    } catch (err) {
+      console.error('TTS error:', err)
+      setIsLoading(false)
     }
   }
 
@@ -125,14 +167,25 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
             <div className="flex items-center gap-2">
               <button
                 onClick={toggleSpeaking}
+                disabled={isLoading}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium ${
-                  isPlaying && !isPaused
+                  isLoading
+                    ? 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-wait'
+                    : isPlaying && !isPaused
                     ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
-                title={isPlaying ? (isPaused ? '继续朗读' : '暂停朗读') : '开始朗读'}
+                title={isLoading ? '加载中...' : isPlaying ? (isPaused ? '继续朗读' : '暂停朗读') : '开始朗读'}
               >
-                {isPlaying && !isPaused ? (
+                {isLoading ? (
+                  <>
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="hidden sm:inline">加载中</span>
+                  </>
+                ) : isPlaying && !isPaused ? (
                   <>
                     <svg className="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
