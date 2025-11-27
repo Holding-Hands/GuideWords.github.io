@@ -56,15 +56,16 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
     
     if (!text.trim()) return
 
-    // 限制文本长度（VoiceRSS 免费版有限制）
-    if (text.length > 3000) {
-      text = text.substring(0, 3000) + '...'
+    // 限制文本长度（减少以加快响应速度）
+    if (text.length > 1000) {
+      text = text.substring(0, 1000) + '...'
     }
 
     setIsLoading(true)
+    console.log('TTS text length:', text.length)
 
     try {
-      // 使用 POST 请求获取音频（避免 URL 长度限制）
+      // 使用 POST 请求获取音频
       const response = await fetch('https://api.voicerss.org/', {
         method: 'POST',
         headers: {
@@ -75,7 +76,7 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
           hl: 'zh-cn',
           src: text,
           c: 'MP3',
-          f: '16khz_16bit_mono',
+          f: '8khz_8bit_mono', // 使用更低质量以加快速度
         }),
       })
 
