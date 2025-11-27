@@ -15,6 +15,22 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
+
+  // 加载语音列表
+  useEffect(() => {
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices()
+      setVoices(availableVoices)
+    }
+
+    loadVoices()
+    window.speechSynthesis.onvoiceschanged = loadVoices
+
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null
+    }
+  }, [])
 
   // 停止朗读
   const stopSpeaking = () => {
@@ -34,30 +50,37 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
         setIsPaused(true)
       }
     } else {
+      // 关键修复：在移动端，播放前必须先 cancel，否则容易卡死
+      window.speechSynthesis.cancel()
+
       // 创建新的朗读实例
-      // 从 HTML 字符串中提取纯文本
       const tempDiv = document.createElement('div')
       tempDiv.innerHTML = guide.content
       const text = tempDiv.innerText || tempDiv.textContent || ''
       
-      // 如果没有文本，不执行
       if (!text.trim()) return
 
       const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = 'zh-CN' // 设置中文
-      utterance.rate = 1.0 // 语速
+      // 尝试找到中文语音
+      const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN'))
+      if (zhVoice) {
+        utterance.voice = zhVoice
+      }
+      utterance.lang = 'zh-CN'
+      utterance.rate = 1.0
       
-      // 绑定事件
       utterance.onend = () => {
         setIsPlaying(false)
         setIsPaused(false)
       }
       
-      utterance.onerror = () => {
+      utterance.onerror = (e) => {
+        console.error('Speech error:', e)
         setIsPlaying(false)
         setIsPaused(false)
       }
 
+      // iOS Safari 需要在设置好 utterance 后延迟一点点播放，或者直接播放
       utteranceRef.current = utterance
       window.speechSynthesis.speak(utterance)
       setIsPlaying(true)
