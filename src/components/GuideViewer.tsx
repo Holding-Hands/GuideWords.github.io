@@ -34,6 +34,12 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
   const [ttsMode, setTtsMode] = useState<'native' | 'voicerss' | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
+  
+  // 分段播放相关 refs
+  const chunksRef = useRef<string[]>([])
+  const currentChunkRef = useRef<number>(0)
+  const preloadedAudioRef = useRef<HTMLAudioElement | null>(null)
+  const isStoppedRef = useRef<boolean>(false)
 
   // 初始化时检测 TTS 模式
   useEffect(() => {
@@ -51,6 +57,9 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
 
   // 停止朗读
   const stopSpeaking = () => {
+    // 标记停止
+    isStoppedRef.current = true
+    
     // 停止原生 API
     if (ttsMode === 'native' && window.speechSynthesis) {
       window.speechSynthesis.cancel()
@@ -61,6 +70,15 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
       audioRef.current.currentTime = 0
       audioRef.current = null
     }
+    // 清理预加载
+    if (preloadedAudioRef.current) {
+      URL.revokeObjectURL(preloadedAudioRef.current.src)
+      preloadedAudioRef.current = null
+    }
+    // 重置分段状态
+    chunksRef.current = []
+    currentChunkRef.current = 0
+    
     setIsPlaying(false)
     setIsPaused(false)
     setIsLoading(false)
@@ -101,13 +119,30 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
     window.speechSynthesis.speak(utterance)
   }
 
-  // 使用 VoiceRSS API（慢，但兼容微信）
-  const speakWithVoiceRSS = async (text: string) => {
-    // 限制文本长度
-    if (text.length > 1000) {
-      text = text.substring(0, 1000) + '...'
+  // 将文本分成小段（按句子分割，每段约300字）
+  const splitTextToChunks = (text: string, chunkSize = 300): string[] => {
+    const chunks: string[] = []
+    // 按句子分割
+    const sentences = text.split(/(?<=[。！？.!?\n])/g).filter(s => s.trim())
+    
+    let currentChunk = ''
+    for (const sentence of sentences) {
+      if (currentChunk.length + sentence.length > chunkSize && currentChunk) {
+        chunks.push(currentChunk.trim())
+        currentChunk = sentence
+      } else {
+        currentChunk += sentence
+      }
     }
+    if (currentChunk.trim()) {
+      chunks.push(currentChunk.trim())
+    }
+    
+    return chunks.length > 0 ? chunks : [text.substring(0, chunkSize)]
+  }
 
+  // 加载单个音频块
+  const loadChunk = async (text: string): Promise<HTMLAudioElement | null> => {
     try {
       const response = await fetch('https://api.voicerss.org/', {
         method: 'POST',
@@ -121,48 +156,98 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
         }),
       })
 
-      if (!response.ok) throw new Error('API request failed')
+      if (!response.ok) return null
 
       const blob = await response.blob()
-      console.log('VoiceRSS response:', { type: blob.type, size: blob.size })
-
-      if (blob.size < 1000 || blob.type.includes('text')) {
+      if (blob.size < 500 || blob.type.includes('text')) {
         const errorText = await blob.text()
         console.error('VoiceRSS error:', errorText)
-        alert('语音服务错误: ' + errorText)
-        setIsLoading(false)
-        return
+        return null
       }
 
       const audioUrl = URL.createObjectURL(blob)
       const audio = new Audio(audioUrl)
-      audioRef.current = audio
-
-      audio.onplay = () => {
-        setIsPlaying(true)
-        setIsPaused(false)
-        setIsLoading(false)
-      }
-
-      audio.onended = () => {
-        setIsPlaying(false)
-        setIsPaused(false)
-        URL.revokeObjectURL(audioUrl)
-        audioRef.current = null
-      }
-
-      audio.onerror = () => {
-        setIsPlaying(false)
-        setIsLoading(false)
-        URL.revokeObjectURL(audioUrl)
-        audioRef.current = null
-      }
-
-      await audio.play()
+      audio.preload = 'auto'
+      return audio
     } catch (err) {
-      console.error('VoiceRSS error:', err)
+      console.error('Load chunk error:', err)
+      return null
+    }
+  }
+
+  // 播放下一段
+  const playNextChunk = async () => {
+    if (isStoppedRef.current) return
+
+    const chunks = chunksRef.current
+    const currentIndex = currentChunkRef.current
+
+    if (currentIndex >= chunks.length) {
+      // 全部播放完毕
+      setIsPlaying(false)
+      setIsPaused(false)
+      return
+    }
+
+    // 使用预加载的音频或者加载新的
+    let audio = preloadedAudioRef.current
+    if (!audio) {
+      setIsLoading(true)
+      audio = await loadChunk(chunks[currentIndex])
       setIsLoading(false)
     }
+    preloadedAudioRef.current = null
+
+    if (!audio || isStoppedRef.current) {
+      setIsPlaying(false)
+      return
+    }
+
+    audioRef.current = audio
+    
+    audio.onplay = () => {
+      setIsPlaying(true)
+      setIsPaused(false)
+      setIsLoading(false)
+    }
+
+    audio.onended = () => {
+      URL.revokeObjectURL(audio!.src)
+      currentChunkRef.current++
+      playNextChunk() // 播放下一段
+    }
+
+    audio.onerror = () => {
+      setIsPlaying(false)
+      setIsLoading(false)
+    }
+
+    // 预加载下一段
+    const nextIndex = currentIndex + 1
+    if (nextIndex < chunks.length) {
+      loadChunk(chunks[nextIndex]).then(nextAudio => {
+        if (!isStoppedRef.current) {
+          preloadedAudioRef.current = nextAudio
+        }
+      })
+    }
+
+    console.log(`Playing chunk ${currentIndex + 1}/${chunks.length}`)
+    await audio.play()
+  }
+
+  // 使用 VoiceRSS API（分段预加载，快速响应）
+  const speakWithVoiceRSS = async (text: string) => {
+    isStoppedRef.current = false
+    
+    // 分段
+    const chunks = splitTextToChunks(text, 300)
+    chunksRef.current = chunks
+    currentChunkRef.current = 0
+    console.log(`Split into ${chunks.length} chunks`)
+
+    // 开始播放第一段
+    await playNextChunk()
   }
 
   // 开始/暂停朗读
