@@ -63,10 +63,10 @@ function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-between">
             <div className="flex-1 text-center">
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-3 transition-colors">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors">
                 华东导游词
               </h1>
-              <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base transition-colors">
+              <p className="text-gray-600 dark:text-gray-300 text-sm transition-colors">
                 探索华东地区的历史文化与自然风光
               </p>
             </div>
