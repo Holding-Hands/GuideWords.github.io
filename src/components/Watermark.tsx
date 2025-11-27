@@ -23,42 +23,23 @@ export default function Watermark({
     const container = containerRef.current
     if (!container) return
 
-    // Clear existing watermarks
-    container.innerHTML = ''
-
-    // Calculate how many watermarks we need
-    const width = window.innerWidth
-    const height = window.innerHeight
-    const cols = Math.ceil(width / gap) + 1
-    const rows = Math.ceil(height / gap) + 1
-
-    // Create watermark elements
-    for (let i = 0; i < rows; i++) {
-      for (let j = 0; j < cols; j++) {
-        const watermark = document.createElement('div')
-        watermark.className = 'watermark-text'
-        watermark.textContent = text
-        watermark.style.cssText = `
-          left: ${j * gap}px;
-          top: ${i * gap}px;
-          font-size: ${fontSize}px;
-          color: rgba(0, 0, 0, ${opacity});
-          transform: rotate(${rotate}deg);
-        `
-        container.appendChild(watermark)
-      }
-    }
-
-    // Re-render on window resize
-    const handleResize = () => {
-      const newWidth = window.innerWidth
-      const newHeight = window.innerHeight
-      const newCols = Math.ceil(newWidth / gap) + 1
-      const newRows = Math.ceil(newHeight / gap) + 1
-
+    const createWatermarks = () => {
+      // Clear existing watermarks
       container.innerHTML = ''
-      for (let i = 0; i < newRows; i++) {
-        for (let j = 0; j < newCols; j++) {
+
+      // Check if dark mode
+      const isDark = document.documentElement.classList.contains('dark')
+      const color = isDark ? `rgba(255, 255, 255, ${opacity})` : `rgba(0, 0, 0, ${opacity})`
+
+      // Calculate how many watermarks we need
+      const width = window.innerWidth
+      const height = window.innerHeight
+      const cols = Math.ceil(width / gap) + 1
+      const rows = Math.ceil(height / gap) + 1
+
+      // Create watermark elements
+      for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
           const watermark = document.createElement('div')
           watermark.className = 'watermark-text'
           watermark.textContent = text
@@ -66,7 +47,7 @@ export default function Watermark({
             left: ${j * gap}px;
             top: ${i * gap}px;
             font-size: ${fontSize}px;
-            color: rgba(0, 0, 0, ${opacity});
+            color: ${color};
             transform: rotate(${rotate}deg);
           `
           container.appendChild(watermark)
@@ -74,8 +55,32 @@ export default function Watermark({
       }
     }
 
+    createWatermarks()
+
+    // Re-render on window resize
+    const handleResize = () => {
+      createWatermarks()
+    }
+
+    // Watch for theme changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          createWatermarks()
+        }
+      })
+    })
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      observer.disconnect()
+    }
   }, [text, fontSize, opacity, rotate, gap])
 
   return (
