@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Guide } from '@/types/guide'
 import Watermark from './Watermark'
 import { useTheme } from '@/contexts/ThemeContext'
+import ReactMarkdown from 'react-markdown'
 
 // VoiceRSS API Key（备用方案）
 const VOICERSS_API_KEY = '28fef066a3164873802fae9fe37e351c'
@@ -28,6 +29,8 @@ interface GuideViewerProps {
 
 export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
   const { theme } = useTheme()
+  const [markdown, setMarkdown] = useState<string>('')
+  const [isLoadingContent, setIsLoadingContent] = useState(true)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -42,6 +45,32 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
   const preloadedAudiosRef = useRef<Map<number, HTMLAudioElement>>(new Map()) // 预加载队列
   const isStoppedRef = useRef<boolean>(false)
   const loadingPromisesRef = useRef<Map<number, Promise<HTMLAudioElement | null>>>(new Map())
+
+  // 加载 markdown 内容
+  useEffect(() => {
+    const loadMarkdown = async () => {
+      setIsLoadingContent(true)
+      try {
+        // 移除 'public/' 前缀，因为 Next.js 的 public 目录直接映射到根路径
+        const filePath = guide.fileName.replace(/^public\//, '/')
+        const response = await fetch(filePath)
+        if (response.ok) {
+          const text = await response.text()
+          setMarkdown(text)
+        } else {
+          console.error('Failed to load:', filePath, response.status)
+          setMarkdown('# 加载失败\n\n无法加载文件内容')
+        }
+      } catch (error) {
+        console.error('Error loading markdown:', error)
+        setMarkdown('# 加载错误\n\n加载文件时出错')
+      } finally {
+        setIsLoadingContent(false)
+      }
+    }
+    
+    loadMarkdown()
+  }, [guide.fileName])
 
   // 初始化时检测 TTS 模式
   useEffect(() => {
@@ -313,11 +342,9 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
       return
     }
 
-    // 提取纯文本
-    const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = guide.content
-    const text = tempDiv.innerText || tempDiv.textContent || ''
-    if (!text.trim()) return
+    // 提取纯文本（从 markdown）
+    const text = markdown.replace(/[#*`>\-\[\]()]/g, '').trim()
+    if (!text) return
 
     setIsLoading(true)
     console.log('TTS mode:', ttsMode, 'text length:', text.length)
@@ -339,6 +366,18 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
       }
     }
   }, [])
+
+  // 显示加载状态
+  if (isLoadingContent) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">加载中...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col transition-colors duration-300">
@@ -457,10 +496,9 @@ export default function GuideViewer({ guide, onBack }: GuideViewerProps) {
           </div>
 
           {/* Content */}
-          <div 
-            className="markdown-content prose prose-lg dark:prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: guide.content }}
-          />
+          <div className="markdown-content prose prose-lg dark:prose-invert max-w-none">
+            <ReactMarkdown>{markdown}</ReactMarkdown>
+          </div>
         </article>
       </main>
 

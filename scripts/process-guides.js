@@ -25,46 +25,18 @@ const guides = [
   { id: 'fangzhimin', fileName: 'public/guides/历史人物/方志敏的一生.md', title: '方志敏的一生', category: '历史人物', location: '江西', description: '伟大的无产阶级革命家、军事家，闽浙赣革命根据地和红十军的创建人，用生命诠释清贫的真谛。' },
   { id: 'beishangbeishang', fileName: 'public/guides/文化专题/北上北上.md', title: '北上北上', category: '文化专题', location: '华东', description: '探索华东地区的历史文化脉络和地域特色。' },
   { id: 'fojiao', fileName: 'public/guides/文化专题/佛教知识.md', title: '佛教知识', category: '文化专题', location: '杭州', description: '佛教文化基础知识，了解佛教在江南地区的传播与影响。' },
+  { id: 'chawhhua', fileName: 'public/guides/文化专题/茶文化.md', title: '茶文化', category: '文化专题', location: '杭州', description: '中国茶文化的起源、发展与传承，从神农尝百草到茶道精神的完整解读。' },
 ];
 
-// Process markdown files
-const processedGuides = guides.map(guide => {
-  const filePath = path.join(__dirname, '..', guide.fileName);
-  
-  try {
-    if (fs.existsSync(filePath)) {
-      const markdown = fs.readFileSync(filePath, 'utf-8');
-      const html = marked.parse(markdown);
-      
-      return {
-        ...guide,
-        content: html,
-      };
-    } else {
-      console.warn(`Warning: File not found - ${guide.fileName}`);
-      return {
-        ...guide,
-        content: `<p>文件 ${guide.fileName} 未找到</p>`,
-      };
-    }
-  } catch (error) {
-    console.error(`Error processing ${guide.fileName}:`, error);
-    return {
-      ...guide,
-      content: `<p>处理文件 ${guide.fileName} 时出错</p>`,
-    };
-  }
-});
-
-// Generate TypeScript file
+// Generate TypeScript file (metadata only)
 const outputContent = `// This file is auto-generated. Do not edit manually.
 import { Guide } from '@/types/guide'
 
-export const guideData: Guide[] = ${JSON.stringify(processedGuides, null, 2)}
+export const guideData: Guide[] = ${JSON.stringify(guides, null, 2)}
 `;
 
 const outputPath = path.join(__dirname, '..', 'src', 'data', 'guides.ts');
 fs.writeFileSync(outputPath, outputContent, 'utf-8');
 
-console.log(`✅ Processed ${processedGuides.length} guide files`);
+console.log(`✅ Generated metadata for ${guides.length} guides`);
 console.log(`📝 Output written to ${outputPath}`);

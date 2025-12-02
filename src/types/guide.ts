@@ -4,6 +4,5 @@ export interface Guide {
   category: string
   location?: string
   description?: string
-  content: string
   fileName: string
 }
