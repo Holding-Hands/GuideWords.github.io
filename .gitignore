@@ -22,6 +22,9 @@ public/resources/押题卷/雷大大/雷大大押题卷4科三科四题目.pdf
 # Next.js
 /.next/
 /out/
+.next/
+out/
+node_modules/.cache/
 
 # Production
 /build
