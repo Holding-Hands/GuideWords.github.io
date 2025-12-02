@@ -7,7 +7,9 @@
     "prebuild": "node scripts/process-guides.js",
     "build": "next build",
     "start": "next start",
-    "export": "next build && next export"
+    "export": "next build && next export",
+    "clean": "node scripts/clean-cache.js",
+    "rebuild": "node scripts/clean-cache.js && npm run build"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
