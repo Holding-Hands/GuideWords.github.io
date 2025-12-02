@@ -30,7 +30,7 @@ function PDFViewerContent({ pdfUrl, title, fileSize, onBack }: PDFViewerProps) {
   }, [])
 
   useEffect(() => {
-    // 检查文件大小，如果超过 10MB 显示警告
+    // 检查文件大小，如果超过 20MB 显示警告（降低阈值，提升体验）
     if (fileSize) {
       const sizeMatch = fileSize.match(/(\d+(?:\.\d+)?)\s*(MB|KB|GB)/i)
       if (sizeMatch) {
@@ -38,7 +38,7 @@ function PDFViewerContent({ pdfUrl, title, fileSize, onBack }: PDFViewerProps) {
         const unit = sizeMatch[2].toUpperCase()
         const sizeInMB = unit === 'GB' ? size * 1024 : unit === 'MB' ? size : size / 1024
         
-        if (sizeInMB > 10) {
+        if (sizeInMB > 20) {
           setShowWarning(true)
           setIsLoading(false)
           return
@@ -51,17 +51,32 @@ function PDFViewerContent({ pdfUrl, title, fileSize, onBack }: PDFViewerProps) {
   useEffect(() => {
     if (!userConfirmed) return
     
-    // 模拟加载进度（因为无法获取真实进度）
+    // 根据文件大小调整加载时间
+    let maxLoadTime = 3000 // 默认 3 秒
+    if (fileSize) {
+      const sizeMatch = fileSize.match(/(\d+(?:\.\d+)?)\s*(MB|KB|GB)/i)
+      if (sizeMatch) {
+        const size = parseFloat(sizeMatch[1])
+        const unit = sizeMatch[2].toUpperCase()
+        const sizeInMB = unit === 'GB' ? size * 1024 : unit === 'MB' ? size : size / 1024
+        
+        // 根据文件大小动态调整加载时间
+        if (sizeInMB > 50) maxLoadTime = 10000
+        else if (sizeInMB > 20) maxLoadTime = 6000
+        else if (sizeInMB > 10) maxLoadTime = 4000
+      }
+    }
+    
     setIsLoading(true)
     setLoadProgress(0)
     
-    const timer1 = setTimeout(() => setLoadProgress(30), 500)
-    const timer2 = setTimeout(() => setLoadProgress(60), 2000)
-    const timer3 = setTimeout(() => setLoadProgress(90), 5000)
+    const timer1 = setTimeout(() => setLoadProgress(30), maxLoadTime * 0.1)
+    const timer2 = setTimeout(() => setLoadProgress(60), maxLoadTime * 0.3)
+    const timer3 = setTimeout(() => setLoadProgress(90), maxLoadTime * 0.6)
     const timer4 = setTimeout(() => {
       setIsLoading(false)
       setLoadProgress(100)
-    }, 8000)
+    }, maxLoadTime)
     
     return () => {
       clearTimeout(timer1)
@@ -69,15 +84,20 @@ function PDFViewerContent({ pdfUrl, title, fileSize, onBack }: PDFViewerProps) {
       clearTimeout(timer3)
       clearTimeout(timer4)
     }
-  }, [pdfUrl, userConfirmed])
+  }, [pdfUrl, userConfirmed, fileSize])
 
   // 判断是否为外部链接
   const isExternalUrl = pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')
   
-  // 构建完整的 PDF URL - 统一使用 PDF.js 以获得更好的性能和体验
+  // 构建完整的 PDF URL
   const getViewerUrl = () => {
-    const url = isExternalUrl ? pdfUrl : window.location.origin + pdfUrl
-    return `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(url)}`
+    // 本地文件：添加 #toolbar=0 隐藏工具栏，提升体验
+    // 外部链接：使用 Google Docs Viewer
+    if (isExternalUrl) {
+      return `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`
+    }
+    // 本地文件直接用浏览器内置查看器，添加参数优化显示
+    return `${pdfUrl}#view=FitH&toolbar=1&navpanes=1`
   }
 
   return (
@@ -235,7 +255,7 @@ function PDFViewerContent({ pdfUrl, title, fileSize, onBack }: PDFViewerProps) {
                     {fileSize ? `文件大小：${fileSize}` : '文件较大，请耐心等待'}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
-                    使用 PDF.js 在线查看器
+                    使用浏览器内置 PDF 查看器
                   </p>
                   {/* Progress Bar */}
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
