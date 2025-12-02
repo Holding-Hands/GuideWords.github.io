@@ -2,21 +2,17 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import PDFViewer from '@/components/PDFViewer'
-import MarkdownViewer from '@/components/MarkdownViewer'
-import DocViewer from '@/components/DocViewer'
+import { useRouter } from 'next/navigation'
 import Watermark from '@/components/Watermark'
-import { withBasePath } from '@/config/site'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { resources, type Resource } from '@/data/resources'
 
 function ResourcesPageContent() {
-  const [selectedPdf, setSelectedPdf] = useState<Resource | null>(null)
+  const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState<string>('全部')
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('全部')
   const [selectedThirdCategory, setSelectedThirdCategory] = useState<string>('全部')
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [scrollPosition, setScrollPosition] = useState<number>(0)
 
   // 获取所有主分类
   const categories = useMemo(() => {
@@ -117,57 +113,9 @@ function ResourcesPageContent() {
     return grouped
   }, [filteredResources, selectedCategory, selectedSubCategory])
 
-  // 保存滚动位置
-  const handleOpenPdf = (resource: Resource) => {
-    setScrollPosition(window.scrollY)
-    setSelectedPdf(resource)
-  }
-
-  // 恢复滚动位置
-  const handleBack = () => {
-    setSelectedPdf(null)
-    // 使用 setTimeout 确保 DOM 更新后再滚动
-    setTimeout(() => {
-      window.scrollTo({
-        top: scrollPosition,
-        behavior: 'smooth'
-      })
-    }, 0)
-  }
-
-  if (selectedPdf) {
-    const fileUrl = selectedPdf.externalUrl || withBasePath(selectedPdf.pdfUrl)
-    const isMd = selectedPdf.pdfUrl.endsWith('.md')
-    const isDoc = selectedPdf.pdfUrl.endsWith('.docx') || selectedPdf.pdfUrl.endsWith('.doc')
-    
-    if (isMd) {
-      return (
-        <MarkdownViewer
-          mdUrl={fileUrl}
-          title={selectedPdf.title}
-          onBack={handleBack}
-        />
-      )
-    }
-    
-    if (isDoc) {
-      return (
-        <DocViewer
-          docUrl={fileUrl}
-          title={selectedPdf.title}
-          onBack={handleBack}
-        />
-      )
-    }
-    
-    return (
-      <PDFViewer
-        pdfUrl={fileUrl}
-        title={selectedPdf.title}
-        fileSize={selectedPdf.fileSize}
-        onBack={handleBack}
-      />
-    )
+  // 打开资源详情页
+  const handleOpenResource = (resource: Resource) => {
+    router.push(`/resources/${resource.id}`)
   }
 
   return (
@@ -370,19 +318,20 @@ function ResourcesPageContent() {
                 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleOpenPdf(resource)}
+                    onClick={() => handleOpenResource(resource)}
                     className="flex-1 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-all hover:scale-105 hover:shadow-lg"
                   >
                     在线阅读
                   </button>
                   <a
-                    href={resource.externalUrl || withBasePath(resource.pdfUrl)}
-                    download={resource.title + '.pdf'}
+                    href={resource.externalUrl || `/resources/${resource.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all hover:scale-105 hover:border-blue-400 dark:hover:border-blue-500"
-                    title="下载"
+                    title="新窗口打开"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
                   </a>
                 </div>
