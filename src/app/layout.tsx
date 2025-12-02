@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import CopyProtection from '@/components/CopyProtection'
-import VConsoleScript from '@/components/VConsoleScript'
 
 export const metadata: Metadata = {
   title: '华东导游词 - 在线浏览平台',
@@ -22,8 +21,6 @@ export default function RootLayout({
       <body className="antialiased select-none">
         <CopyProtection />
         {children}
-        {/* vConsole 调试工具 - 延迟加载不影响性能 */}
-        <VConsoleScript />
       </body>
     </html>
   )
